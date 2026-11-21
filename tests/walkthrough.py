@@ -8,6 +8,7 @@ Runs all four groups with ?debug=1&save=local, plus a "no consent" run and a
 "Stop the study" run, and checks the saved JSON.
 """
 import json
+import urllib.request
 import sys
 import tempfile
 from pathlib import Path
@@ -39,34 +40,46 @@ def ng_done(page):
     page.click("#ng-done")
 
 
-def mock_datapipe(ctx, condition, captured):
-    """Pretend a DataPipe ID is set and answer DataPipe's API locally."""
+MOCK = "http://localhost:8790"  # tests/apps_script_mock.js
+
+
+def mock_sheet(ctx, lose_first_reply=False):
+    """Point the experiment at the mock Apps Script (which runs the real Code.gs)."""
+    state = {"posts": 0}
+
     def fake_config(route):
-        body = route.fetch().text().replace("[12-character DataPipe ID]", "TESTID123456")
+        body = route.fetch().text().replace("[paste the Web app URL ending in /exec]",
+                                            "https://script.google.com/macros/s/TEST/exec")
         route.fulfill(body=body, content_type="application/javascript")
 
-    def fake_api(route):
-        url = route.request.url
-        if url.endswith("/condition/"):
-            route.fulfill(json={"condition": condition})
-        else:
-            captured.append(route.request.post_data_buffer)
-            route.fulfill(json={"message": "Success"})
+    def fake_script(route):
+        req = route.request
+        target = MOCK + "/exec" + (req.url.split("/exec", 1)[1] if "/exec" in req.url else "")
+        resp = route.fetch(url=target)
+        if req.method == "POST":
+            state["posts"] += 1
+            if lose_first_reply and state["posts"] == 1:
+                route.abort()  # the data arrived, but the reply is lost on the way back
+                return
+        route.fulfill(response=resp)
 
     ctx.route("**/config.js", fake_config)
-    ctx.route("https://pipe.jspsych.org/api/**", fake_api)
+    ctx.route("https://script.google.com/**", fake_script)
+    return state
 
 
-def run_group(pw_browser, group, outdir, datapipe=False):
+def run_group(pw_browser, group, outdir, sheet=False, lose_first_reply=False):
     ctx = pw_browser.new_context(accept_downloads=True, viewport={"width": 1280, "height": 900})
-    captured = []
-    if datapipe:
-        mock_datapipe(ctx, group - 1, captured)
+    if sheet:
+        state = mock_sheet(ctx, lose_first_reply)
     page = ctx.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
-    if datapipe:
-        page.goto(f"{BASE}?pid=test{group}")  # live mode: no group, no debug
+    if sheet:
+        # no ?group: the Sheet assigns it
+        page.goto(f"{BASE}?debug=1&save=gsheet&pid={group}")
+        page.wait_for_selector("#debug-badge")
+        group = int(page.inner_text("#debug-badge").split("group ")[1].split(" ")[0])
     else:
         page.goto(f"{BASE}?debug=1&save=local&group={group}&pid=test{group}")
 
@@ -160,22 +173,11 @@ def run_group(pw_browser, group, outdir, datapipe=False):
     page.check("input[name=interrupted][value=no]")
     page.click("#jspsych-survey-html-form-next")
 
-    if datapipe:
+    if sheet:
         click_text(page, "Save my responses")
-        expect(page.locator("body")).to_contain_text("Your responses have been saved", timeout=15000)
-        import gzip
-        raw = captured[0]
-        try:
-            raw = gzip.decompress(raw)
-        except OSError:
-            pass
-        payload = json.loads(raw)
-        assert payload["experimentID"] == "TESTID123456"
-        assert payload["filename"] == f"who-comes-to-mind_test{group}.json"
-        path = Path(outdir) / f"dp{group}.json"
-        path.write_text(payload["data"])
+        expect(page.locator("body")).to_contain_text("Your responses have been saved", timeout=20000)
         ctx.close()
-        return path, errors
+        return group, state, errors
 
     # debrief -> save -> download
     with page.expect_download() as dl:
@@ -270,13 +272,23 @@ if __name__ == "__main__":
             assert not errs, errs
             s = check_data(path, g)
             print(f"group {g}: OK  first_rt_close={s['first_rt_close']} ms  first_rt_places={s['first_rt_places']} ms")
-        if "--live" in sys.argv:
-            # full-length timings: takes about 5 minutes
-            path, errs = run_group(b, 3, out, datapipe=True)
+        # Google Sheet saving through the mock Apps Script (real Code.gs)
+        seen = []
+        for i, lose in enumerate([False, False, False, True]):
+            g, state, errs = run_group(b, f"sheet{i}", out, sheet=True, lose_first_reply=lose)
             assert not errs, errs
-            s = check_data(path, 3)
-            assert s["assignment_method"] == "datapipe_balanced", s
-            print("datapipe (mocked), live timings, balanced assignment: OK")
+            seen.append(g)
+            assert state["posts"] == 1, state  # saved once, no duplicate retries
+        assert sorted(seen) == [1, 2, 3, 4], seen  # balanced assignment
+        dump = json.loads(urllib.request.urlopen(MOCK + "/__dump").read())
+        part = dump["sheets"]["participants"]
+        head = part[0]
+        rows = [dict(zip(head, r)) for r in part[1:] if dict(zip(head, r)).get("pid", "").startswith("sheet")]
+        assert len(rows) == 4, rows
+        assert all(r["assignment_method"] == "sheet_balanced" for r in rows)
+        assert len([r for r in dump["sheets"]["persons"][1:]]) >= 16
+        assert any(f["name"] == "who-comes-to-mind_sheet0.json" for f in dump["files"])
+        print(f"Google Sheet saving (mock): OK  groups assigned {seen}; lost reply recovered by check")
         run_not_configured(b)
         print("unconfigured live link blocked: OK")
         run_no_consent(b)

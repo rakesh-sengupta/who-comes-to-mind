@@ -12,8 +12,8 @@ cd "$(dirname "$0")"
 REPO="${1:-who-comes-to-mind}"
 OWNER="$(gh api user --jq .login)"
 
-if grep -q '\[12-character DataPipe ID\]' config.js; then
-  echo "NOTE: DATAPIPE_EXPERIMENT_ID in config.js is still a placeholder."
+if grep -q '\[paste the Web app URL' config.js; then
+  echo "NOTE: GSHEET_URL in config.js is still a placeholder (see README, step 1)."
   echo "      The live link will show 'not open yet' until you set it (?debug=1 still works)."
 fi
 
@@ -37,4 +37,4 @@ URL="https://$OWNER.github.io/$REPO/"
 echo
 echo "Published. The first build takes 1-2 minutes."
 echo "  Participant link : $URL"
-echo "  Pilot / test link: ${URL}?debug=1&group=4   (saves to your own computer, not OSF)"
+echo "  Pilot / test link: ${URL}?debug=1&group=4   (saves to your own computer, not the Sheet)"

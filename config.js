@@ -10,18 +10,18 @@ const CONFIG = {
   STUDY_VERSION: "0.1.0-pilot",
 
   /* ---------------- Saving ----------------
-   * "local"    : downloads a .json file at the end (pilot / testing on your own laptop)
-   * "datapipe" : saves to OSF through pipe.jspsych.org (set DATAPIPE_EXPERIMENT_ID)
-   * "jatos"    : saves to a JATOS server (add <script src="jatos.js"> in index.html)
+   * "gsheet" : sends each finished session to a Google Apps Script in your own Google Sheet,
+   *            which adds rows to the Sheet and saves the raw file in a Drive folder
+   *            (google-apps-script/Code.gs; set GSHEET_URL below)
+   * "local"  : downloads a .json file at the end (pilot / testing on your own laptop)
    * Can be overridden from the URL with ?save=local. With ?debug=1 the default is "local",
-   * so test runs on the live site never land in the OSF data folder.
+   * so test runs on the live site never land in the Sheet.
    */
-  SAVE_MODE: "datapipe", // GitHub Pages has no server of its own, so live data go to OSF via DataPipe
-  DATAPIPE_EXPERIMENT_ID: "[12-character DataPipe ID]",
-  /* If true and SAVE_MODE is "datapipe", DataPipe hands out groups in rotation
-   * (set "number of conditions" = 4 in DataPipe). Otherwise groups are random.
-   * A ?group=1..4 URL parameter always wins (useful for piloting). */
-  DATAPIPE_BALANCED_ASSIGNMENT: true,
+  SAVE_MODE: "gsheet",
+  GSHEET_URL: "[paste the Web app URL ending in /exec]",
+  /* If true, the Sheet hands out groups so they stay balanced among people who finish.
+   * Otherwise groups are random. A ?group=1..4 URL parameter always wins (useful for piloting). */
+  BALANCED_ASSIGNMENT: true,
 
   /* ---------------- Timing (seconds) ---------------- */
   TIMING: {

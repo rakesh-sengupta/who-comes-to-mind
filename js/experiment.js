@@ -6,7 +6,7 @@
  *   ?pid=ABC123   participant ID (otherwise a random one is made)
  *   ?group=1..4   force a group (piloting); see CONFIG.GROUPS
  *   ?debug=1      short timings and a visible group badge
- *   ?save=local   override CONFIG.SAVE_MODE (local | datapipe | jatos)
+ *   ?save=local   override CONFIG.SAVE_MODE (gsheet | local)
  */
 
 /* ---------------- Setup ---------------- */
@@ -14,7 +14,18 @@ const URLP = new URLSearchParams(window.location.search);
 const DEBUG = URLP.get("debug") === "1";
 const TIMING = DEBUG ? CONFIG.DEBUG_TIMING : CONFIG.TIMING;
 const SAVE_MODE = URLP.get("save") || (DEBUG ? "local" : CONFIG.SAVE_MODE);
-const DATAPIPE_READY = /^[A-Za-z0-9]{12}$/.test(CONFIG.DATAPIPE_EXPERIMENT_ID);
+const GSHEET_READY = /^https:\/\/script\.google\.com\/.+\/exec$/.test(CONFIG.GSHEET_URL);
+
+/** fetch with a time limit */
+async function fetchWithTimeout(url, opts = {}, ms = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 const S = {
   // session state
@@ -156,12 +167,14 @@ const assignGroup = {
     let method = "url";
     if (!(g >= 1 && g <= 4)) {
       g = null;
-      if (SAVE_MODE === "datapipe" && CONFIG.DATAPIPE_BALANCED_ASSIGNMENT) {
+      if (SAVE_MODE === "gsheet" && CONFIG.BALANCED_ASSIGNMENT && GSHEET_READY) {
         try {
-          const c = await jsPsychPipe.getCondition(CONFIG.DATAPIPE_EXPERIMENT_ID);
-          if (Number.isInteger(c) && c >= 0 && c <= 3) {
-            g = c + 1;
-            method = "datapipe_balanced";
+          const res = await fetchWithTimeout(
+            `${CONFIG.GSHEET_URL}?action=condition&pid=${encodeURIComponent(PID)}`, {}, 10000);
+          const j = await res.json();
+          if (j.ok && Number.isInteger(j.group) && j.group >= 1 && j.group <= 4) {
+            g = j.group;
+            method = "sheet_balanced";
           }
         } catch (err) {
           /* fall back to random */
@@ -573,16 +586,33 @@ const summarise = {
 /* ====================================================================
  * 12. Save (with retries and a download fallback)
  * ==================================================================== */
+// One ID per session, so a retried save is never stored twice
+const SUBMISSION_ID = `${PID}_${Date.now()}`;
+jsPsych.data.addProperties({ submission_id: SUBMISSION_ID });
+
 async function saveOnce(dataString, filename) {
-  if (SAVE_MODE === "datapipe") {
-    const res = await jsPsychPipe.saveData(CONFIG.DATAPIPE_EXPERIMENT_ID, filename, dataString);
-    if (res instanceof Error || !res || res.error) throw new Error((res && (res.message || res.error)) || "DataPipe error");
-    return true;
-  }
-  if (SAVE_MODE === "jatos") {
-    if (typeof jatos === "undefined") throw new Error("jatos.js not loaded");
-    await jatos.submitResultData(dataString);
-    return true;
+  if (SAVE_MODE === "gsheet") {
+    const payload = JSON.stringify({
+      study_id: CONFIG.STUDY_ID,
+      submission_id: SUBMISSION_ID,
+      pid: PID,
+      filename: filename,
+      data: dataString,
+    });
+    try {
+      // sent as text/plain so the browser does not need a CORS preflight
+      const res = await fetchWithTimeout(CONFIG.GSHEET_URL, { method: "POST", body: payload }, 30000);
+      const j = await res.json();
+      if (j.ok) return true;
+      throw new Error(j.error || "Sheet refused the data");
+    } catch (err) {
+      // The reply may have been lost even though the data arrived: ask the Sheet.
+      const res = await fetchWithTimeout(
+        `${CONFIG.GSHEET_URL}?action=check&sid=${encodeURIComponent(SUBMISSION_ID)}`, {}, 15000);
+      const j = await res.json();
+      if (j.ok && j.saved) return true;
+      throw err;
+    }
   }
   // local
   jsPsych.data.get().localSave("json", filename);
@@ -626,22 +656,17 @@ const endScreen = {
   stimulus: () => `<div class="page">${S.saveChoice ? TEXT.end_saved : TEXT.end_not_saved}</div>`,
   choices: "NO_KEYS",
   data: { trial_role: "end" },
-  on_load: () => {
-    if (SAVE_MODE === "jatos" && typeof jatos !== "undefined" && S.saveChoice) {
-      setTimeout(() => jatos.endStudy(), 3000);
-    }
-  },
 };
 
 /* ====================================================================
  * Run
  * ==================================================================== */
-if (SAVE_MODE === "datapipe" && !DATAPIPE_READY) {
+if (SAVE_MODE === "gsheet" && !GSHEET_READY) {
   // Never run a live session that cannot save its data.
   document.body.innerHTML = `<div class="page" style="margin-top:3em">
     <h2>This study is not open yet</h2>
     <p>Thank you for your interest. The study link is not ready to collect responses.</p>
-    <p class="muted">For the research team: set <code>DATAPIPE_EXPERIMENT_ID</code> in <code>config.js</code>,
+    <p class="muted">For the research team: set <code>GSHEET_URL</code> in <code>config.js</code>,
     or test with <code>?debug=1</code>.</p></div>`;
 } else jsPsych.run([
   browserCheck,
