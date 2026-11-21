@@ -1,0 +1,97 @@
+/* Who Comes to Mind First? — calm, readable, low-clutter styling */
+:root {
+  --ink: #1f2328;
+  --muted: #5b636b;
+  --line: #d5d9de;
+  --accent: #2f5d8a;
+  --blue-bg: #eef4fa;
+  --yellow-bg: #fff7dc;
+  --error: #a3261b;
+}
+
+body {
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  font-size: 18px;
+  line-height: 1.55;
+  background: #fbfbfa;
+}
+
+.jspsych-content { max-width: 760px; }
+.page { text-align: left; max-width: 720px; margin: 0 auto; }
+.page h2 { font-size: 1.5em; margin: 0.4em 0 0.6em; }
+.muted { color: var(--muted); font-size: 0.92em; }
+
+.box { border: 1px solid var(--line); border-radius: 8px; padding: 0.6em 1em; margin: 1em 0; background: #fff; }
+.box p { margin: 0.5em 0; }
+.box-blue { background: var(--blue-bg); border-color: #c9dbec; }
+.box-yellow { background: var(--yellow-bg); border-color: #ecdca5; }
+.eg { display: inline-block; background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 0 0.4em; margin: 0.1em 0.15em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em; }
+.key { display: inline-block; border: 1px solid #9aa3ab; border-bottom-width: 3px; border-radius: 5px; padding: 0 0.45em; font-size: 0.85em; font-weight: 600; background: #fff; }
+ol.steps li { margin: 0.35em 0; }
+
+.jspsych-btn { font-size: 17px; padding: 10px 18px; border-radius: 6px; margin: 0.6em 0.3em; }
+.jspsych-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.jspsych-btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #7aa7d6; outline-offset: 2px; }
+
+.fixation { font-size: 56px; font-weight: 300; }
+
+/* ---------- timed name generator ---------- */
+.ng-wrap { min-height: 380px; text-align: center; }
+.q-big { font-size: 1.6em; font-weight: 600; margin: 0.5em 0 1em; }
+.ng-status { min-height: 1.8em; color: var(--muted); }
+.ng-input-area { margin: 0.6em auto; }
+.ng-input-label { display: block; margin-bottom: 0.4em; }
+#ng-input { font-size: 22px; padding: 8px 12px; width: 320px; border: 2px solid var(--accent); border-radius: 6px; text-align: center; }
+.ng-error { color: var(--error); min-height: 1.4em; margin-top: 0.3em; font-size: 0.95em; }
+.ng-hint { color: var(--muted); font-size: 0.85em; }
+.ng-list { display: inline-block; text-align: left; margin: 1em auto 0.2em; min-height: 1em; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.ng-count { color: var(--muted); font-size: 0.9em; }
+.ng-done { background: #f3f4f6; }
+
+/* ---------- list entry ---------- */
+.le-wrap { text-align: left; }
+.le-row { display: flex; align-items: flex-start; gap: 0.6em; margin: 0.45em 0; }
+.le-num { width: 2em; text-align: right; padding-top: 0.35em; color: var(--muted); }
+.le-cell { flex: 1; }
+.le-input { font-size: 18px; padding: 6px 10px; width: 100%; max-width: 380px; border: 1px solid #aab2ba; border-radius: 5px; }
+.le-rowq { margin-top: 0.3em; font-size: 0.92em; }
+.le-rowq-label { color: var(--muted); margin-right: 0.6em; }
+.le-radio { margin-right: 0.8em; white-space: nowrap; }
+.le-error { color: var(--error); font-size: 0.9em; }
+.le-none { display: block; margin: 0.6em 0 0.8em; font-weight: 600; }
+.le-add { background: #f3f4f6; font-size: 15px; padding: 6px 12px; }
+.le-nudge { color: var(--accent); min-height: 1.4em; margin: 0.4em 0; }
+.le-continue, #tw-continue { display: block; margin: 0.6em auto; }
+
+/* ---------- minimum-time bar ---------- */
+.min-timer { margin: 1em 0 0.3em; }
+.min-timer-msg { color: var(--muted); font-size: 0.9em; margin-bottom: 0.3em; }
+.min-timer-track { height: 6px; background: #e6e8eb; border-radius: 3px; overflow: hidden; }
+.min-timer-bar { height: 100%; width: 0; background: #9db9d6; }
+
+/* ---------- writing ---------- */
+.tw-wrap { text-align: left; }
+#tw-text, fieldset.q textarea { width: 100%; box-sizing: border-box; font-size: 17px; line-height: 1.5; padding: 10px; border: 1px solid #aab2ba; border-radius: 6px; font-family: inherit; }
+
+/* ---------- questionnaires ---------- */
+fieldset.q { border: none; padding: 0.9em 0 0.5em; margin: 0; }
+fieldset.q + fieldset.q { box-shadow: 0 -1px 0 var(--line); }
+fieldset.q legend { font-weight: 600; padding: 0 0 0.4em; }
+.ch-group { display: flex; flex-direction: column; gap: 0.2em; }
+.ch { cursor: pointer; }
+.lk { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25em; }
+.lk-end { color: var(--muted); font-size: 0.85em; margin: 0 0.4em; }
+.lk-cell { display: inline-flex; flex-direction: column; align-items: center; width: 2.4em; cursor: pointer; }
+.lk-cell span { font-size: 0.85em; }
+.pp-head { text-align: center; }
+.pp-code { font-size: 1.6em; font-weight: 700; font-family: ui-monospace, Menlo, Consolas, monospace; margin: 0.2em 0; }
+#jspsych-survey-html-form-next { display: block; margin: 1em auto; }
+
+/* ---------- stop button and dialog ---------- */
+#stop-study { position: fixed; top: 10px; right: 12px; z-index: 50; font-size: 14px; padding: 5px 10px; border: 1px solid #b9bfc5; border-radius: 5px; background: #fff; color: var(--muted); cursor: pointer; }
+#stop-overlay { position: fixed; inset: 0; background: rgba(20, 24, 28, 0.45); z-index: 100; display: flex; align-items: center; justify-content: center; }
+#stop-overlay[hidden] { display: none; }
+.stop-dialog { background: #fff; border-radius: 10px; padding: 1.2em 1.6em; max-width: 440px; text-align: center; }
+#debug-badge { position: fixed; bottom: 8px; left: 8px; z-index: 50; font-size: 12px; background: #222; color: #fff; padding: 3px 8px; border-radius: 4px; opacity: 0.8; }
+[hidden] { display: none !important; }
