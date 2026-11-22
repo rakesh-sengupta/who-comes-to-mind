@@ -18,7 +18,7 @@ const CONFIG = {
    * so test runs on the live site never land in the Sheet.
    */
   SAVE_MODE: "gsheet",
-  GSHEET_URL: "[paste the Web app URL ending in /exec]",
+  GSHEET_URL: "https://script.google.com/macros/s/AKfycbwBmCZqJzJkCgWooAAPgRPyZzwyJ0WgdiF8FhxykupLRneXt5Evc0xMsEJRAuA8B2oPyA/exec",
   /* If true, the Sheet hands out groups so they stay balanced among people who finish.
    * Otherwise groups are random. A ?group=1..4 URL parameter always wins (useful for piloting). */
   BALANCED_ASSIGNMENT: true,
